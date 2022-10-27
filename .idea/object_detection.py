@@ -28,26 +28,6 @@ Licensed under the Apache License, Version 2.0 (the "License");
 
 """# Object Detection
 
-<table class="tfo-notebook-buttons" align="left">
-  <td>
-    <a target="_blank" href="https://www.tensorflow.org/hub/tutorials/object_detection"><img src="https://www.tensorflow.org/images/tf_logo_32px.png" />View on TensorFlow.org</a>
-  </td>
-  <td>
-    <a target="_blank" href="https://colab.research.google.com/github/tensorflow/hub/blob/master/examples/colab/object_detection.ipynb"><img src="https://www.tensorflow.org/images/colab_logo_32px.png" />Run in Google Colab</a>
-  </td>
-  <td>
-    <a target="_blank" href="https://github.com/tensorflow/hub/blob/master/examples/colab/object_detection.ipynb"><img src="https://www.tensorflow.org/images/GitHub-Mark-32px.png" />View on GitHub</a>
-  </td>
-  <td>
-    <a href="https://storage.googleapis.com/tensorflow_docs/hub/examples/colab/object_detection.ipynb"><img src="https://www.tensorflow.org/images/download_logo_32px.png" />Download notebook</a>
-  </td>
-  <td>
-    <a href="https://tfhub.dev/s?q=google%2Ffaster_rcnn%2Fopenimages_v4%2Finception_resnet_v2%2F1%20OR%20google%2Ffaster_rcnn%2Fopenimages_v4%2Finception_resnet_v2%2F1"><img src="https://www.tensorflow.org/images/hub_logo_32px.png" />See TF Hub models</a>
-  </td>
-</table>
-
-This Colab demonstrates use of a TF-Hub module trained to perform object detection.
-
 ## Setup
 """
 
@@ -59,10 +39,10 @@ import tensorflow as tf
 import tensorflow_hub as hub
 
 # For downloading the image.
-import matplotlib.pyplot as plt
-import tempfile
-from six.moves.urllib.request import urlopen
-from six import BytesIO
+# import matplotlib.pyplot as plt
+# import tempfile
+# from six.moves.urllib.request import urlopen
+# from six import BytesIO
 
 # For drawing onto the image.
 import numpy as np
@@ -192,6 +172,7 @@ Load a public image from Open Images v4, save locally, and display.
 # By Heiko Gorski, Source: https://commons.wikimedia.org/wiki/File:Naxos_Taverna.jpg
 image_url = "https://upload.wikimedia.org/wikipedia/commons/6/60/Naxos_Taverna.jpg"  #@param
 downloaded_image_path = download_and_resize_image(image_url, 1280, 856, True)
+# camera_image_path = ""
 
 """Pick an object detection module and apply on the downloaded image. Modules:
 * **FasterRCNN+InceptionResNet V2**: high accuracy,
@@ -227,30 +208,3 @@ def run_detector(detector, path):
   display_image(image_with_boxes)
 
 run_detector(detector, downloaded_image_path)
-
-"""### More images
-Perform inference on some additional images with time tracking.
-
-"""
-
-image_urls = [
-  # Source: https://commons.wikimedia.org/wiki/File:The_Coleoptera_of_the_British_islands_(Plate_125)_(8592917784).jpg
-  "https://upload.wikimedia.org/wikipedia/commons/1/1b/The_Coleoptera_of_the_British_islands_%28Plate_125%29_%288592917784%29.jpg",
-  # By Américo Toledano, Source: https://commons.wikimedia.org/wiki/File:Biblioteca_Maim%C3%B3nides,_Campus_Universitario_de_Rabanales_007.jpg
-  "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Biblioteca_Maim%C3%B3nides%2C_Campus_Universitario_de_Rabanales_007.jpg/1024px-Biblioteca_Maim%C3%B3nides%2C_Campus_Universitario_de_Rabanales_007.jpg",
-  # Source: https://commons.wikimedia.org/wiki/File:The_smaller_British_birds_(8053836633).jpg
-  "https://upload.wikimedia.org/wikipedia/commons/0/09/The_smaller_British_birds_%288053836633%29.jpg",
-  ]
-
-def detect_img(image_url):
-  start_time = time.time()
-  image_path = download_and_resize_image(image_url, 640, 480)
-  run_detector(detector, image_path)
-  end_time = time.time()
-  print("Inference time:",end_time-start_time)
-
-detect_img(image_urls[0])
-
-detect_img(image_urls[1])
-
-detect_img(image_urls[2])
