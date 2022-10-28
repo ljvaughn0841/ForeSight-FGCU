@@ -68,12 +68,14 @@ print("The following GPU devices are available: %s" % tf.test.gpu_device_name())
 Visualization code adapted from [TF object detection API](https://github.com/tensorflow/models/blob/master/research/object_detection/utils/visualization_utils.py) for the simplest required functionality.
 """
 
+
+## display our image
 def display_image(image):
   fig = plt.figure(figsize=(20, 15))
   plt.grid(False)
   plt.imshow(image)
 
-
+## insert image from file and download it to resize it
 def download_and_resize_image(url, new_width=256, new_height=256,
                               display=False):
   _, filename = tempfile.mkstemp(suffix=".jpg")
@@ -90,6 +92,7 @@ def download_and_resize_image(url, new_width=256, new_height=256,
   return filename
 
 
+## bound a box on our image to get dimensions
 def draw_bounding_box_on_image(image,
                                ymin,
                                xmin,
@@ -133,7 +136,8 @@ def draw_bounding_box_on_image(image,
               font=font)
     text_bottom -= text_height - 2 * margin
 
-
+## this is to draw a box around a object
+## also our error handler
 def draw_boxes(image, boxes, class_names, scores, max_boxes=10, min_score=0.1):
   """Overlay labeled boxes on an image with formatted scores and label names."""
   colors = list(ImageColor.colormap.values())
@@ -183,11 +187,13 @@ module_handle = "https://tfhub.dev/google/faster_rcnn/openimages_v4/inception_re
 
 detector = hub.load(module_handle).signatures['default']
 
+## load our image
 def load_img(path):
   img = tf.io.read_file(path)
   img = tf.image.decode_jpeg(img, channels=3)
   return img
 
+## run our detector
 def run_detector(detector, path):
   img = load_img(path)
 
