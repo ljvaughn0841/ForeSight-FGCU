@@ -11,6 +11,7 @@ To run this file you must use the following:
 # Import Open CV
 import cv2 as cv
 import numpy as np
+import torch
 from matplotlib import pyplot as plt
 
 
@@ -27,6 +28,7 @@ def edge_detection(frame):
     img_blur = cv.GaussianBlur(img_gray, (3, 3), 0)
 
     # Canny Edge Detection
+    # Thresholds can be tweaked in order to increase accuracy.
     edges = cv.Canny(image=img_blur, threshold1=100,
                      threshold2=200)
 
@@ -111,12 +113,103 @@ class OpticalFlow:
         self.p0 = good_new.reshape(-1, 1, 2)
 
 
+class Midas_Depth:
+    """
+    Depth estimation using MiDaS.
+
+CODE REFERENCES:
+    MiDaS:
+        @ARTICLE {Ranftl2022,
+        author  = "Ren\'{e} Ranftl and Katrin Lasinger and David Hafner
+                    and Konrad Schindler and Vladlen Koltun",
+        title   = "Towards Robust Monocular Depth Estimation: Mixing Datasets
+                    for Zero-Shot Cross-Dataset Transfer",
+        journal = "IEEE Transactions on Pattern Analysis and
+                    Machine Intelligence",
+        year    = "2022",
+        volume  = "44",
+        number  = "3"
+        }
+
+    Tutorial Video:
+        Nicolai Nielsen - Computer Vision & AI
+        https://youtu.be/jid-53uPQr0
+    """
+    def __init__(self,):
+        # Loads a model for depth estimation
+        # MiDaS v2.1 - Small (the lowest accuracy, the highest inference speed)
+        self.model_type = "MiDaS_small"
+
+        # Loads the model from the github.
+        # https://github.com/isl-org/MiDaS
+        self.midas = torch.hub.load("intel-isl/MiDaS", self.model_type)
+
+        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        self.midas.to(self.device)
+
+        self.midas.eval()
+
+        self.midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms")
+
+        self.transform = self.midas_transforms.small_transform
+
+    def depth_estimation(self, img):
+
+        # Transforms the images from BGR format to RGB
+        # BGR is cv2's default but MiDaS uses RGB
+        img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+
+        # Apply input transforms
+        input_batch = self.transform(img).to(self.device)
+
+        # Prediction and resize to original resolution
+        # torch.no_grad() disables gradient calculation
+        with torch.no_grad():
+            # We pass it our input image
+            prediction = self.midas(input_batch)
+
+            # Resizing to Original Resolution
+            prediction = torch.nn.functional.interpolate(
+                prediction.unsqueeze(1),
+                size=img.shape[:2],
+                mode="bicubic",
+                align_corners=False,
+            ).squeeze()
+
+        # takes the prediction puts it on the cpu in a numpy array format
+        # for post-processing
+        depth_map = prediction.cpu().numpy()
+        # Uses minmax normalization on the image
+        # ( sets the lowest values to zero and highest to 1 )
+        depth_map = cv.normalize(depth_map, None, 0, 1,
+                                  norm_type=cv.NORM_MINMAX, dtype=cv.CV_64F)
+
+        # converting image back into BGR for open cv
+        img = cv.cvtColor(img, cv.COLOR_RGB2BGR)
+
+        # converting values from '0 to 1' to '0 to 255' (RGB color range)
+        depth_map = (depth_map * 255).astype(np.uint8)
+
+        # applies a color map to the image for better visualization
+        # depth_map = cv2.applyColorMap(depth_map , cv2.COLORMAP_MAGMA)
+
+        # displays the img
+        cv.imshow('Image', img)
+        # displays the depth map
+        cv.imshow('Depth Map', depth_map)
+
+        edge_map = cv.cvtColor(depth_map, cv.COLOR_RGB2BGR)
+
+        edge_detection(edge_map)
+
+
 def main():
     # define a video capture object
     vid = cv.VideoCapture(0)
 
     lk = OpticalFlow(vid)
 
+    md = Midas_Depth()
 
     while True:
 
@@ -125,11 +218,13 @@ def main():
         ret, frame = vid.read()
 
         # Display the resulting frame
-        cv.imshow('input', frame)
+        #cv.imshow('input', frame)
 
-        edge_detection(frame)
+        #edge_detection(frame)
 
-        lk.lk_optical_flow(frame)
+        md.depth_estimation(frame)
+
+        #lk.lk_optical_flow(frame)
 
         # the 'q' button is set as the
         # quitting button you may use any
