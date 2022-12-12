@@ -29,11 +29,13 @@ def edge_detection(frame):
 
     # Canny Edge Detection
     # Thresholds can be tweaked in order to increase accuracy.
-    edges = cv.Canny(image=img_blur, threshold1=100,
-                     threshold2=200)
+    edges = cv.Canny(image=img_blur, threshold1=10,
+                     threshold2=50)
 
     # Displaying the frame with canny edge detection in another window
     cv.imshow('Canny Edge Detection', edges)
+
+    return edges
 
 
 class OpticalFlow:
@@ -42,16 +44,16 @@ class OpticalFlow:
         # Initializing Items for the Lucas-Kanade Optical Flow
         # params for corner detection
         self.feature_params = dict(maxCorners=100,
-                              qualityLevel=0.3,
-                              minDistance=7,
-                              blockSize=7)
+                                   qualityLevel=0.3,
+                                   minDistance=7,
+                                   blockSize=7)
 
         # Parameters for lucas kanade optical flow
         self.lk_params = dict(winSize=(15, 15),
-                         maxLevel=2,
-                         criteria=(
-                         cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT,
-                         10, 0.03))
+                              maxLevel=2,
+                              criteria=(
+                                  cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT,
+                                  10, 0.03))
 
         # Create some random colors
         self.color = np.random.randint(0, 255, (100, 3))
@@ -60,7 +62,7 @@ class OpticalFlow:
         self.ret, self.old_frame = vid.read()
         self.old_gray = cv.cvtColor(self.old_frame, cv.COLOR_BGR2GRAY)
         self.p0 = cv.goodFeaturesToTrack(self.old_gray, mask=None,
-                                    **self.feature_params)
+                                         **self.feature_params)
 
         # Create a mask image for drawing purposes
         self.mask = np.zeros_like(self.old_frame)
@@ -83,10 +85,12 @@ class OpticalFlow:
         # Select good points
 
         if p1 is None:
-            self.p0 = cv.goodFeaturesToTrack(self.old_gray, mask=None, **self.feature_params)
+            self.p0 = cv.goodFeaturesToTrack(self.old_gray, mask=None,
+                                             **self.feature_params)
             p1, st, err = cv.calcOpticalFlowPyrLK(self.old_gray,
                                                   frame_gray,
-                                                  self.p0, None, **self.lk_params)
+                                                  self.p0, None,
+                                                  **self.lk_params)
             # clear the mask
             self.mask = np.zeros_like(self.old_frame)
 
@@ -99,7 +103,7 @@ class OpticalFlow:
             a, b = new.ravel()
             c, d = old.ravel()
             self.mask = cv.line(self.mask, (int(a), int(b)), (int(c), int(d)),
-                           self.color[i].tolist(), 2)
+                                self.color[i].tolist(), 2)
 
             frame = cv.circle(frame, (int(a), int(b)), 5,
                               self.color[i].tolist(), -1)
@@ -135,7 +139,8 @@ CODE REFERENCES:
         Nicolai Nielsen - Computer Vision & AI
         https://youtu.be/jid-53uPQr0
     """
-    def __init__(self,):
+
+    def __init__(self, ):
         # Loads a model for depth estimation
         # MiDaS v2.1 - Small (the lowest accuracy, the highest inference speed)
         self.model_type = "MiDaS_small"
@@ -144,7 +149,8 @@ CODE REFERENCES:
         # https://github.com/isl-org/MiDaS
         self.midas = torch.hub.load("intel-isl/MiDaS", self.model_type)
 
-        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        self.device = torch.device(
+            "cuda") if torch.cuda.is_available() else torch.device("cpu")
         self.midas.to(self.device)
 
         self.midas.eval()
@@ -154,7 +160,6 @@ CODE REFERENCES:
         self.transform = self.midas_transforms.small_transform
 
     def depth_estimation(self, img):
-
         # Transforms the images from BGR format to RGB
         # BGR is cv2's default but MiDaS uses RGB
         img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
@@ -182,7 +187,7 @@ CODE REFERENCES:
         # Uses minmax normalization on the image
         # ( sets the lowest values to zero and highest to 1 )
         depth_map = cv.normalize(depth_map, None, 0, 1,
-                                  norm_type=cv.NORM_MINMAX, dtype=cv.CV_64F)
+                                 norm_type=cv.NORM_MINMAX, dtype=cv.CV_64F)
 
         # converting image back into BGR for open cv
         img = cv.cvtColor(img, cv.COLOR_RGB2BGR)
@@ -194,20 +199,40 @@ CODE REFERENCES:
         # depth_map = cv2.applyColorMap(depth_map , cv2.COLORMAP_MAGMA)
 
         # displays the img
-        cv.imshow('Image', img)
+        # cv.imshow('Image', img)
+
         # displays the depth map
         cv.imshow('Depth Map', depth_map)
 
-        edge_map = cv.cvtColor(depth_map, cv.COLOR_RGB2BGR)
+        return depth_map
 
-        edge_detection(edge_map)
+        # edge_map = cv.cvtColor(depth_map, cv.COLOR_RGB2BGR)
+        #
+        # edge_detection(edge_map)
 
+
+def obj_detect(img_arr):
+    """
+    Takes an image and detects pixels above a certain value
+    within the middle of the frame.
+
+    :param img_arr: 2 dimensional array of an img (expects RGB format)
+    :return: Boolean True if object is detected
+    """
+    length = len(img_arr)
+    height = len(img_arr)
+
+    for x in img_arr[int(length*1/5):int(length*4/5)]:
+        for y in x[int(height*1/5):int(height*4/5)]:
+            if y > 125:
+                return True
+    return False
 
 def main():
     # define a video capture object
     vid = cv.VideoCapture(0)
 
-    lk = OpticalFlow(vid)
+    #  lk = OpticalFlow(vid)
 
     md = Midas_Depth()
 
@@ -217,14 +242,27 @@ def main():
         # by frame
         ret, frame = vid.read()
 
+        # cam_out.write(frame)
+
         # Display the resulting frame
-        #cv.imshow('input', frame)
+        # cv.imshow('input', frame)
 
-        #edge_detection(frame)
+        # edge_detection(frame)
 
-        md.depth_estimation(frame)
+        depth_m = md.depth_estimation(frame)
 
-        #lk.lk_optical_flow(frame)
+        depth_m = cv.cvtColor(depth_m, cv.COLOR_RGB2BGR)
+
+        edge_map = edge_detection(depth_m)
+
+        # object detection on the edge map
+
+        obj = obj_detect(edge_map)
+
+        if obj:
+            print("Obstacle detected within the frame.")
+
+        # lk.lk_optical_flow(frame)
 
         # the 'q' button is set as the
         # quitting button you may use any
